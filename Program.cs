@@ -1,7 +1,4 @@
 ﻿
-
-using System.Data.Common;
-
 ChooseMapSize();
 Console.Clear();
 
