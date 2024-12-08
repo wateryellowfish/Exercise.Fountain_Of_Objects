@@ -69,8 +69,6 @@ void ChooseMapSize()
         Console.Clear();
         ChooseMapSize();
     }
-    Console.WriteLine($"Chosen map size is {Map.Row}x{Map.Column}.");
-    Console.ReadKey();
 }
 
 
@@ -84,10 +82,9 @@ static class Map
     public static void InitializeTiles()
     {
         Tiles=new string[Row, Column];
-        int i, j;
-        for(i=0; i<Row;i++)
+        for(int i=0; i<Row;i++)
         {
-            for (j = 0; j < Column; j++)     
+            for (int j = 0; j < Column; j++)     
             {
                 Tiles[i, j] = " ";
             }
@@ -169,7 +166,7 @@ class Player : ILocation
 
 
 
-public class Narrative
+public abstract class Narrative
 {
     public static ConsoleColor TextColor { get; protected set; }
     public static string? Message { get; protected set; }
