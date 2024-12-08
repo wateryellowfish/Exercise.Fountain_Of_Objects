@@ -1,4 +1,8 @@
-﻿ChooseMapSize();
+﻿
+
+using System.Data.Common;
+
+ChooseMapSize();
 Console.Clear();
 
 Map.InitializeTiles();
@@ -65,6 +69,8 @@ void ChooseMapSize()
         Console.Clear();
         ChooseMapSize();
     }
+    Console.WriteLine($"Chosen map size is {Map.Row}x{Map.Column}.");
+    Console.ReadKey();
 }
 
 
@@ -72,17 +78,19 @@ static class Map
 {
     public static int Row { get; set; }
     public static int Column { get; set; }
-    private static string[,] Tiles { get; set; } = new string[4, 4];
+    private static string[,] Tiles { get; set; } = new string[Row, Column];
+
 
     public static void InitializeTiles()
     {
+        Tiles=new string[Row, Column];
         int i, j;
-        for(i=0; i<4;i++)
+        for(i=0; i<Row;i++)
         {
-            for (j = 0; j < 4; j++)
+            for (j = 0; j < Column; j++)     
             {
                 Tiles[i, j] = " ";
-                }
+            }
         }
     }
 
@@ -90,10 +98,10 @@ static class Map
     {
         Console.WriteLine();
         int tilenum = 0;
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < Row; i++)
         {
             Console.Write("|");
-            for (int j = 0; j < 4; j++)
+            for (int j = 0; j < Column; j++)
             {
                 if (i == row && j == col)
                 {
@@ -103,7 +111,12 @@ static class Map
                 else Console.Write($" {Tiles[i,j]} |");
                 tilenum++;
             }
-            Console.WriteLine("\n-----------------");
+            Console.WriteLine();
+            for(int k=0; k<=Column*4; k++)
+            {
+                Console.Write("-");
+            }
+            Console.WriteLine();
         }
     }
 }
@@ -125,10 +138,10 @@ class Player : ILocation
         ConsoleKey key=Console.ReadKey().Key;
         Map.Mark(" ", Row, Column);
         Console.Clear();
-        if (key == ConsoleKey.RightArrow && (Column + 1) < 4) Column++;
+        if (key == ConsoleKey.RightArrow && (Column + 1) < Map.Column) Column++;
         else if (key == ConsoleKey.LeftArrow && (Column - 1) >= 0) Column--;
         else if (key == ConsoleKey.UpArrow && (Row - 1) >= 0) Row--;
-        else if (key == ConsoleKey.DownArrow && (Row + 1) < 4) Row++;
+        else if (key == ConsoleKey.DownArrow && (Row + 1) < Map.Row) Row++;
         Map.Mark("X", Row, Column);
     }
 }
