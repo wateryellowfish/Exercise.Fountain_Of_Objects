@@ -1,4 +1,6 @@
-﻿
+﻿using System.Runtime.CompilerServices;
+
+Pit[] pits;
 
 ChooseMapSize();
 Console.Clear();
@@ -10,30 +12,6 @@ Intro.ColoredMessage();
 while (!Player.PlayerWins)
 {
     Player.Move();
-    if(Player.Location==(0,0))
-    {
-        if (!Fountain.IsActivated)
-        {
-            Entrance.ColoredMessage();
-        }
-        else
-        {
-            PlayerSuccess.ColoredMessage();
-            Player.PlayerWins = true;
-        }
-    }
-    else if(Player.Location==Fountain.Location)
-    {
-        if(!Fountain.IsActivated)
-        {
-            FountainFound.ColoredMessage();
-            Fountain.Reactivate();
-        }
-        else
-        {
-            FountainActivated.ColoredMessage();
-        }
-    }
 }
 
 Console.ReadKey();
@@ -47,13 +25,25 @@ void ChooseMapSize()
     string? input = Console.ReadLine();
     if (int.TryParse(input, out int num) && num >= 1 && num <= 3)
     {
-        Map.Size = num switch
+        if (num == 1)
+        {
+            Map.Size = (4, 4);
+            Fountain.Location = (0, 2);
+            pits = [new Pit(3, 2)];
+        }
+        else if (num == 2)
+        {
+            Map.Size = (6, 6);
+            Fountain.Location = (2, 4);
+            Pit[] pits = [new Pit(3, 2), new Pit(0, 5)];
+        }
+        /*Map.Size = num switch
         {
             1 => (4,4),
             2 => (6,6),
             3 => (8,8),
             _ => (0,0)
-        };
+        };*/
     }
     else
     {
@@ -67,6 +57,7 @@ static class Map
 {
     public static (int row, int column) Size { get; set; }
     private static string[,] Tiles { get; set; } = new string[Size.row, Size.column];
+    public static (int row, int column) Entrance { get; } = (0, 0);
 
 
     public static void InitializeTiles()
@@ -114,14 +105,11 @@ static class Map
 }
 
 
-interface ILocation
-{
-    public static (int row, int column) Location { get; }
-}
 
-class Player : ILocation
+static class Player
 {
-    public static bool PlayerWins { get; set; } = false;
+    public static bool PlayerWins { get; private set; } = false;
+    public static bool IsDead { get; private set; } = false;
     public static (int row, int column) Location { get; private set; } = (0, 0);
     public static void Move()
     {
@@ -135,12 +123,44 @@ class Player : ILocation
         else if (key == ConsoleKey.UpArrow && (row - 1) >= 0) Location=(--row,column);
         else if (key == ConsoleKey.DownArrow && (row + 1) < Map.Size.row) Location= (++row,column);
         Map.Mark("X", Location);
+        CheckRoom();
+    }
+
+    private static void CheckRoom()
+    {
+        
+        Object[] objects = [Fountain.];
+
+
+        /*if (Player.Location == Map.Entrance)
+        {
+            if (!Fountain.IsActivated) Entrance.ColoredMessage();
+            else
+            {
+                PlayerSuccess.ColoredMessage();
+                Player.PlayerWins = true;
+            }
+        }
+        else if (Player.Location == Fountain.Location)
+        {
+            if (!Fountain.IsActivated)
+            {
+                FountainFound.ColoredMessage();
+                Fountain.Reactivate();
+            }
+            if (Fountain.IsActivated)
+            {
+                FountainActivated.ColoredMessage();
+            }
+        }*/
     }
 }
- class Fountain : ILocation
+
+
+static class Fountain
 {
     public static bool IsActivated { get; private set; } = false;
-    public static (int row, int col) Location { get; } = (0, 2);
+    public static (int row, int col) Location { get; set; }
 
     public static void Reactivate()
     {
@@ -150,9 +170,17 @@ class Player : ILocation
         if (Console.ReadKey().Key == ConsoleKey.Enter)
         {
             IsActivated = true;
-            FountainActivated.ColoredMessage();
         }
         else Console.WriteLine("Fountain not activated.");
+    }
+}
+
+class Pit
+{
+    public (int row, int col) Location { get; set; }
+    public Pit(int _row,int _col)
+    {
+        Location=(_row, _col);
     }
 }
 
