@@ -1,17 +1,22 @@
-﻿using System.Runtime.CompilerServices;
+﻿
 
-Pit[] pits;
+bool exitGame=false;
 
 ChooseMapSize();
 Console.Clear();
 
-Map.InitializeTiles();
+
 Map.Mark("X", Player.Location);
 Intro.ColoredMessage();
+if (Player.IfNearbyRoom(RoomType.Pit)) NearPit.ColoredMessage();
 
-while (!Player.PlayerWins)
+while (!exitGame)
 {
     Player.Move();
+    if(Player.PlayerWins==true || Player.IsDead==true)
+    {
+        exitGame = true;
+    }
 }
 
 Console.ReadKey();
@@ -25,25 +30,8 @@ void ChooseMapSize()
     string? input = Console.ReadLine();
     if (int.TryParse(input, out int num) && num >= 1 && num <= 3)
     {
-        if (num == 1)
-        {
-            Map.Size = (4, 4);
-            Fountain.Location = (0, 2);
-            pits = [new Pit(3, 2)];
-        }
-        else if (num == 2)
-        {
-            Map.Size = (6, 6);
-            Fountain.Location = (2, 4);
-            Pit[] pits = [new Pit(3, 2), new Pit(0, 5)];
-        }
-        /*Map.Size = num switch
-        {
-            1 => (4,4),
-            2 => (6,6),
-            3 => (8,8),
-            _ => (0,0)
-        };*/
+        Map.InitializeTiles(num);
+        Rooms.Generate(num);
     }
     else
     {
@@ -55,14 +43,27 @@ void ChooseMapSize()
 
 static class Map
 {
-    public static (int row, int column) Size { get; set; }
+    public static (int row, int column) Size { get; private set; }
     private static string[,] Tiles { get; set; } = new string[Size.row, Size.column];
     public static (int row, int column) Entrance { get; } = (0, 0);
 
 
-    public static void InitializeTiles()
+    public static void InitializeTiles(int num)
     {
-        Tiles=new string[Size.row, Size.column];
+        if (num == 1)
+        {
+            Map.Size = (4, 4);
+        }
+        else if (num == 2)
+        {
+            Map.Size = (6, 6);
+        }
+        else if (num == 3)
+        {
+            Map.Size = (8, 8);
+        }
+
+        Tiles =new string[Size.row, Size.column];
         for(int i=0; i<Size.row;i++)
         {
             for (int j = 0; j < Size.column; j++)     
@@ -102,6 +103,11 @@ static class Map
     {
         Tiles[Player.Location.row, Player.Location.column] = " ";
     }
+
+    public static void MarkPits((int row, int col)location)
+    {
+        Tiles[location.row, location.col] = "?";
+    }
 }
 
 
@@ -124,24 +130,22 @@ static class Player
         else if (key == ConsoleKey.DownArrow && (row + 1) < Map.Size.row) Location= (++row,column);
         Map.Mark("X", Location);
         CheckRoom();
+        if (IfNearbyRoom(RoomType.Pit) && PlayerWins==false && IsDead==false) NearPit.ColoredMessage();
     }
 
     private static void CheckRoom()
     {
-        
-        Object[] objects = [Fountain.];
-
-
-        /*if (Player.Location == Map.Entrance)
+        if (Rooms.RoomDescription[Location.row,Location.column]==RoomType.Entrance)
         {
             if (!Fountain.IsActivated) Entrance.ColoredMessage();
             else
             {
                 PlayerSuccess.ColoredMessage();
-                Player.PlayerWins = true;
+                PlayerWins = true;
+                return;
             }
         }
-        else if (Player.Location == Fountain.Location)
+        else if (Rooms.RoomDescription[Location.row, Location.column] == RoomType.FountainRoom)
         {
             if (!Fountain.IsActivated)
             {
@@ -152,7 +156,29 @@ static class Player
             {
                 FountainActivated.ColoredMessage();
             }
-        }*/
+        }
+        else if (Rooms.RoomDescription[Location.row, Location.column] == RoomType.Pit)
+        {
+            IsDead = true;
+            PlayerDied.ColoredMessage();
+            return;
+        }
+    }
+    public static bool IfNearbyRoom(RoomType roomType)
+    {
+        (int, int)[] sequence = new(int, int) []{(1,0),(-1,0),(0,1),(0,-1),(1,1),(-1,-1),(1,-1),(-1,1) };
+        foreach((int x, int y) seq in sequence)
+        {
+            try 
+            {
+                if (Rooms.RoomDescription[Location.row + seq.x, Location.column + seq.y] == roomType) return true;
+            }
+            catch (IndexOutOfRangeException)
+            {
+                continue;
+            }
+        }
+        return false;
     }
 }
 
@@ -160,7 +186,13 @@ static class Player
 static class Fountain
 {
     public static bool IsActivated { get; private set; } = false;
-    public static (int row, int col) Location { get; set; }
+    public static (int row, int col) Location { get; private set; }
+
+    public static void SetLocation()
+    {
+        Random random = new Random();
+        Location = (random.Next(0, Map.Size.row-1), random.Next(0, Map.Size.column-1));
+    }
 
     public static void Reactivate()
     {
@@ -175,12 +207,52 @@ static class Fountain
     }
 }
 
-class Pit
+
+struct Rooms
 {
-    public (int row, int col) Location { get; set; }
-    public Pit(int _row,int _col)
+    public static RoomType[,] RoomDescription { get; private set; } = new RoomType[0, 0];
+    public static (int row, int col)[] Pits { get; private set; }=new (int row, int col)[0];
+
+    public static void Generate(int numberOfPits)
     {
-        Location=(_row, _col);
+        RoomDescription = new RoomType[Map.Size.row, Map.Size.column];
+        for (int i = 0; i < Map.Size.row; i++)
+        {
+            for (int j = 0; j < Map.Size.column; j++)
+            {
+                RoomDescription[i, j] = RoomType.Blank;
+            }
+        }
+        RoomDescription[Map.Entrance.row, Map.Entrance.column] = RoomType.Entrance;
+        GeneratePits(numberOfPits);
+        GenerateFountainRoom();
+    }   
+     
+    private static void GeneratePits (int numberOfPits)
+    { 
+        Random random = new Random();
+        Pits = new (int row, int col)[numberOfPits];
+        for (int i = 0; i < numberOfPits; i++)
+        {
+            int x=random.Next(0,Map.Size.row-1);
+            int y=random.Next(0, Map.Size.column-1);
+            if (RoomDescription[x,y]==RoomType.Blank)
+            {
+                RoomDescription[x,y] = RoomType.Pit;
+                Pits[numberOfPits-1] = (x, y);
+                //Map.MarkPits((x, y));
+            }
+        }
+    }
+
+    private static void GenerateFountainRoom()
+    {
+        Fountain.SetLocation();
+        if (RoomDescription[Fountain.Location.row, Fountain.Location.col] == RoomType.Blank)
+        {
+            RoomDescription[Fountain.Location.row, Fountain.Location.col] = RoomType.FountainRoom;
+        }
+        else GenerateFountainRoom();
     }
 }
 
@@ -248,3 +320,25 @@ class PlayerSuccess : Narrative
         ShowMessage();
     }
 }
+
+class NearPit:Narrative
+{
+    public static void ColoredMessage()
+    {
+        TextColor = ConsoleColor.Red;
+        Message = "\nYou feel a draft.\nThere is a pit in a nearby room.";
+        ShowMessage();
+    }
+}
+
+class PlayerDied : Narrative
+{
+    public static void ColoredMessage()
+    {
+        TextColor = ConsoleColor.DarkRed;
+        Message = "\nYou fell into a deep pit!.\nYou died.";
+        ShowMessage();
+    }
+}
+
+enum RoomType { Blank, Entrance, FountainRoom, Pit}
