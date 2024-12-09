@@ -104,9 +104,9 @@ static class Map
         Tiles[Player.Location.row, Player.Location.column] = " ";
     }
 
-    public static void MarkPits((int row, int col)location)
+    public static void MarkRoom(string mark, (int row, int col)location)
     {
-        Tiles[location.row, location.col] = "?";
+        Tiles[location.row, location.col] = mark;
     }
 }
 
@@ -240,7 +240,7 @@ struct Rooms
             {
                 RoomDescription[x,y] = RoomType.Pit;
                 Pits[numberOfPits-1] = (x, y);
-                //Map.MarkPits((x, y));
+                Map.MarkRoom("!",(x, y));
             }
         }
     }
