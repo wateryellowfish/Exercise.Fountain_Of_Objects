@@ -251,6 +251,7 @@ struct Rooms
         if (RoomDescription[Fountain.Location.row, Fountain.Location.col] == RoomType.Blank)
         {
             RoomDescription[Fountain.Location.row, Fountain.Location.col] = RoomType.FountainRoom;
+            Map.MarkRoom("*",Fountain.Location);
         }
         else GenerateFountainRoom();
     }
